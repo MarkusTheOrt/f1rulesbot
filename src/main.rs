@@ -1,18 +1,5 @@
 mod commands;
 
-use std::{
-    collections::HashSet,
-    env,
-    sync::{
-        atomic::{
-            AtomicBool,
-            Ordering,
-        },
-        Arc,
-    },
-    time::Duration,
-};
-
 use dotenvy::dotenv;
 
 use serenity::{
@@ -33,6 +20,21 @@ use serenity::{
     prelude::*,
 };
 
+use std::{
+    collections::HashSet,
+    env,
+    sync::{
+        atomic::{
+            AtomicBool,
+            Ordering,
+        },
+        Arc,
+    },
+    time::Duration,
+};
+
+/// Store the Database connection in the client. This is Send + Sync since we
+/// store the database in an Arc (Atomically Reference Counted)
 struct DatabaseHandle {}
 
 impl TypeMapKey for DatabaseHandle {
@@ -43,7 +45,7 @@ impl TypeMapKey for DatabaseHandle {
 struct General;
 
 struct Bot {
-    is_permanent_message_running: AtomicBool,
+    is_cache_running: AtomicBool,
 }
 
 #[async_trait]
@@ -59,16 +61,6 @@ impl EventHandler for Bot {
             OnlineStatus::Online,
         )
         .await;
-
-        let guild = GuildId(883847530687913995);
-        if let Err(why) = guild
-            .create_application_command(&ctx.http, |command| {
-                commands::regs::register(command)
-            })
-            .await
-        {
-            println!("Error registering Regs command in guild. {}", why)
-        }
 
         let _global =
             Command::create_global_application_command(&ctx.http, |command| {
@@ -94,7 +86,7 @@ impl EventHandler for Bot {
 
         let ctx = Arc::new(ctx);
 
-        if !self.is_permanent_message_running.load(Ordering::Relaxed) {
+        if !self.is_cache_running.load(Ordering::Relaxed) {
             println!("Permanent Message service started.");
             let _ctx1 = Arc::clone(&ctx);
             tokio::spawn(async move {
@@ -103,7 +95,7 @@ impl EventHandler for Bot {
                 }
             });
 
-            self.is_permanent_message_running.swap(true, Ordering::Relaxed);
+            self.is_cache_running.swap(true, Ordering::Relaxed);
         }
     }
 
@@ -169,7 +161,7 @@ async fn main() {
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILDS;
     let mut client = Client::builder(token, intents)
         .event_handler(Bot {
-            is_permanent_message_running: AtomicBool::new(false),
+            is_cache_running: AtomicBool::new(false),
         })
         .framework(framework)
         .await
