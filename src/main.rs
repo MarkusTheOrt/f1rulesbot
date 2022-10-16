@@ -113,40 +113,23 @@ impl EventHandler for Bot {
         interaction: Interaction,
     ) {
         if let Interaction::Autocomplete(command) = interaction {
-            if let Err(why) = command
-                .create_autocomplete_response(&ctx.http, |response| {
-                    for (i, str) in
-                        commands::regs::simple_index().iter().enumerate()
-                    {
-                        response.add_string_choice(
-                            format!("{}. {}", str.number, str.name),
-                            i,
-                        );
-                    }
-                    response
-                })
-                .await
-            {
-                println!("Couldn't respond to autocomplete: {}", why);
+            if let Err(why) = match command.data.name.as_str() {
+                "regs" => commands::regs::autocomplete(&ctx, &command).await,
+                _ => Err(SerenityError::Other(
+                    "Tried to autocomplete not-implemented command.",
+                )),
+            } {
+                println!("Couldn't send a autocomplete response. {}", why);
             }
             return;
         }
         if let Interaction::ApplicationCommand(command) = interaction {
-            let content = match command.data.name.as_str() {
-                "ping" => commands::ping::run(&command.data.options),
-                "regs" => "REGS REGS REGS".to_string(),
-                _ => "Not Implemented".to_string(),
-            };
-
-            if let Err(why) = command.create_interaction_response(ctx.http, |response| {
-                response.kind(interaction::InteractionResponseType::ChannelMessageWithSource)
-                .interaction_response_data(|message| message.ephemeral(true).content(content).embed(|embed| {
-                    embed.title("Object")
-                    .description(format!("```{:#?}```", command.data))
-                }))
-            }).await
-            {
-                println!("Couldn't respond to slash command: {}", why);
+            if let Err(why) = match command.data.name.as_str() {
+                "ping" => commands::ping::execute(&ctx, &command).await,
+                "regs" => commands::regs::execute(&ctx, &command).await,
+                _ => commands::not_implemented::execute(&ctx, &command).await,
+            } {
+                println!("Couldn't send a command response. {}", why);
             }
             return;
         }
@@ -162,9 +145,11 @@ impl EventHandler for Bot {
 
 #[tokio::main]
 async fn main() {
-    dotenv().expect("Failed to load .env file");
-    let token = env::var("DISCORD_TOKEN").expect("token");
-    let database_url = env::var("DATABASE_URL").expect("Database URL");
+    if let Err(why) = dotenv() {
+        println!("Couldn't read Dotenv... Skipping. Err: {}", why);
+    }
+    let token = env::var("DISCORD_TOKEN").expect("Missing Discord token.");
+    let database_url = env::var("DATABASE_URL").expect("Missing Database url.");
     let http = Http::new(&token);
 
     let (owners, _bot_id) = match http.get_current_application_info().await {

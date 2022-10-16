@@ -1,14 +1,13 @@
 use serenity::{
     builder::CreateApplicationCommand,
-    model::prelude::command::CommandOptionType,
+    model::{
+        application::interaction::application_command::ApplicationCommandInteraction,
+        prelude::{
+            command::CommandOptionType,
+            interaction::autocomplete::AutocompleteInteraction,
+        },
+    },
 };
-
-pub struct Regulation {
-    pub number: u32,
-    pub name: String,
-    pub search_tags: String,
-    pub db_index: u32,
-}
 
 pub fn register(
     command: &mut CreateApplicationCommand
@@ -26,55 +25,39 @@ pub fn register(
     )
 }
 
-pub fn simple_index() -> Vec<Regulation> {
-    vec![
-        Regulation {
-            number: 1,
-            name: "Regulation".to_string(),
-            search_tags: "".to_string(),
-            db_index: 13,
-        },
-        Regulation {
-            number: 2,
-            name: "General undertaking".to_string(),
-            search_tags: "".to_string(),
-            db_index: 14,
-        },
-        Regulation {
-            number: 3,
-            name: "General conditions".to_string(),
-            search_tags: "".to_string(),
-            db_index: 15,
-        },
-        Regulation {
-            number: 4,
-            name: "Licenses".to_string(),
-            search_tags: "".to_string(),
-            db_index: 16,
-        },
-        Regulation {
-            number: 5,
-            name: "Championship competitions".to_string(),
-            search_tags: "".to_string(),
-            db_index: 17,
-        },
-        Regulation {
-            number: 6,
-            name: "World Championship".to_string(),
-            search_tags: "Title, WDC, WCC, Driver/s, Constructor/s, Point/s, Distance, Reduced".to_string(),
-            db_index: 18,
-        },
-        Regulation {
-            number: 7,
-            name: "Dead Heat".to_string(),
-            search_tags: "Tie, Breaker, Tie Breaker".to_string(),
-            db_index: 19,
-        },
-        Regulation {
-            number: 8,
-            name: "Competitors Applications".to_string(),
-            search_tags: "".to_string(),
-            db_index: 20,
-        },
-    ]
+pub async fn autocomplete(
+    ctx: &serenity::client::Context,
+    command: &AutocompleteInteraction,
+) -> Result<(), serenity::Error> {
+    // let data = ctx.data.read().await;
+    // let db = data.get::<DatabaseHandle>().expect("Database is
+    // none").as_ref();
+
+    // if let Ok(rows) = query!("select * from session").fetch_all(db).await {
+    //     for (_, row) in rows.iter().enumerate() {
+    //         println!("{:?}", row);
+    //     }
+    // }
+    command
+        .create_autocomplete_response(&ctx.http, |f| {
+            f.add_string_choice("choice", "1245")
+        })
+        .await
+}
+
+pub async fn execute(
+    ctx: &serenity::client::Context,
+    command: &ApplicationCommandInteraction,
+) -> Result<(), serenity::Error> {
+    // let db = get_database(&ctx).await.as_ref();
+
+    command
+        .create_interaction_response(&ctx.http, |response| {
+            response.interaction_response_data(|response| {
+                response
+                    .ephemeral(true)
+                    .content("This command is still a work in progress.")
+            })
+        })
+        .await
 }

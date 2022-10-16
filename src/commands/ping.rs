@@ -1,10 +1,19 @@
 use serenity::{
     builder::CreateApplicationCommand,
-    model::prelude::interaction::application_command::CommandDataOption,
+    model::application::interaction::application_command::ApplicationCommandInteraction,
 };
 
-pub fn run(_options: &[CommandDataOption]) -> String {
-    "Hey, I'm alive!".to_string()
+pub async fn execute(
+    ctx: &serenity::client::Context,
+    command: &ApplicationCommandInteraction,
+) -> Result<(), serenity::Error> {
+    command
+        .create_interaction_response(&ctx.http, |response| {
+            response.interaction_response_data(|response| {
+                response.ephemeral(true).content("**Pong!**")
+            })
+        })
+        .await
 }
 
 pub fn register(
