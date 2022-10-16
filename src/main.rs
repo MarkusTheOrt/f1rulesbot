@@ -88,10 +88,17 @@ impl EventHandler for Bot {
 
         if !self.is_cache_running.load(Ordering::Relaxed) {
             println!("Permanent Message service started.");
-            let _ctx1 = Arc::clone(&ctx);
+            let ctx = Arc::clone(&ctx);
             tokio::spawn(async move {
+                let mut i = 0;
                 loop {
-                    tokio::time::sleep(Duration::from_secs(60 * 5)).await;
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    ctx.set_activity(Activity::watching(format!(
+                        "tick: {}",
+                        i
+                    )))
+                    .await;
+                    i += 1;
                 }
             });
 
