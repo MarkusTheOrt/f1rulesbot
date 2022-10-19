@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
-use sqlx::{
-    Pool,
-    Postgres,
-};
+use sqlx::{Pool, Postgres};
 
 use crate::DatabaseHandle;
 
+pub mod cache;
 pub mod not_implemented;
 pub mod ping;
 pub mod regs;

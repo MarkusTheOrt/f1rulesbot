@@ -1,19 +1,15 @@
 mod commands;
+mod search_index;
 
 use dotenvy::dotenv;
 
+use search_index::{SearchIndex, SearchIndexHandle};
 use serenity::{
     async_trait,
-    framework::standard::{
-        macros::group,
-        StandardFramework,
-    },
+    framework::standard::{macros::group, StandardFramework},
     http::Http,
     model::{
-        application::{
-            command::Command,
-            interaction::Interaction,
-        },
+        application::{command::Command, interaction::Interaction},
         prelude::*,
         user::OnlineStatus,
     },
@@ -24,10 +20,7 @@ use std::{
     collections::HashSet,
     env,
     sync::{
-        atomic::{
-            AtomicBool,
-            Ordering,
-        },
+        atomic::{AtomicBool, Ordering},
         Arc,
     },
     time::Duration,
@@ -183,6 +176,9 @@ async fn main() {
     {
         let mut data = client.data.write().await;
         data.insert::<DatabaseHandle>(Arc::new(database));
+        data.insert::<SearchIndexHandle>(Arc::new(RwLock::new(
+            SearchIndex::new(),
+        )))
     }
 
     tokio::spawn(async move {
