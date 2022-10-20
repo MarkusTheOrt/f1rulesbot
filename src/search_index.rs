@@ -1,5 +1,8 @@
 use serenity::prelude::TypeMapKey;
-use std::sync::Arc;
+use std::{
+    cmp::max,
+    sync::Arc,
+};
 use tokio::sync::RwLock;
 
 pub struct SearchIndexHandle {}
@@ -13,9 +16,9 @@ pub struct SearchIndex {
     pub populated: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct IndexParagraph {
-    pub scale: f32,
+    pub scale: i32,
     pub id: i32,
     pub number: String,
     pub tags: String,
@@ -52,18 +55,20 @@ impl SearchIndex {
         for (_, paragraph) in self.paragraphs.iter().enumerate() {
             if paragraph.name.starts_with(&term) {
                 let mut p = paragraph.clone();
-                p.scale = 1.0;
+                p.scale = 100;
                 v.push(p);
                 continue;
             }
-            let dist = lev_distance::lev_distance(&paragraph.name, &term);
-
-            let mut p = paragraph.clone();
-            p.scale = (dist / (p.name.len() - term.len())) as f32;
-            v.push(p);
-            continue;
+            let dist =
+                lev_distance::lev_distance(&paragraph.name, &term) as i32;
+            if dist < 15 {
+                let mut p = paragraph.clone();
+                p.scale = 100 / (dist + 1);
+                v.push(p);
+                continue;
+            }
         }
-        v.sort_unstable_by(|a, b| a.scale.partial_cmp(&b.scale).unwrap());
+        v.sort_unstable_by(|a, b| b.scale.cmp(&a.scale));
         v
     }
 
@@ -76,7 +81,7 @@ impl SearchIndex {
         name: String,
     ) {
         self.paragraphs.push(IndexParagraph {
-            scale: 0 as f32,
+            scale: 0,
             id,
             number,
             tags,
