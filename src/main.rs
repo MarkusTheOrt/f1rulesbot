@@ -3,13 +3,22 @@ mod search_index;
 
 use dotenvy::dotenv;
 
-use search_index::{SearchIndex, SearchIndexHandle};
+use search_index::{
+    SearchIndex,
+    SearchIndexHandle,
+};
 use serenity::{
     async_trait,
-    framework::standard::{macros::group, StandardFramework},
+    framework::standard::{
+        macros::group,
+        StandardFramework,
+    },
     http::Http,
     model::{
-        application::{command::Command, interaction::Interaction},
+        application::{
+            command::Command,
+            interaction::Interaction,
+        },
         prelude::*,
         user::OnlineStatus,
     },
@@ -20,7 +29,10 @@ use std::{
     collections::HashSet,
     env,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{
+            AtomicBool,
+            Ordering,
+        },
         Arc,
     },
     time::Duration,
@@ -55,6 +67,11 @@ impl EventHandler for Bot {
         )
         .await;
 
+        let _ =
+            Command::create_global_application_command(&ctx.http, |command| {
+                commands::cache::register(command)
+            })
+            .await;
         let _global =
             Command::create_global_application_command(&ctx.http, |command| {
                 commands::ping::register(command)
@@ -119,6 +136,7 @@ impl EventHandler for Bot {
             if let Err(why) = match command.data.name.as_str() {
                 "ping" => commands::ping::execute(&ctx, &command).await,
                 "regs" => commands::regs::execute(&ctx, &command).await,
+                "cache" => commands::cache::execute(&ctx, &command).await,
                 _ => commands::not_implemented::execute(&ctx, &command).await,
             } {
                 println!("Couldn't send a command response. {}", why);

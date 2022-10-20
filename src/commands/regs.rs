@@ -4,10 +4,15 @@ use serenity::{
         application::interaction::application_command::ApplicationCommandInteraction,
         prelude::{
             command::CommandOptionType,
-            interaction::autocomplete::AutocompleteInteraction,
+            interaction::{
+                application_command::CommandDataOptionValue,
+                autocomplete::AutocompleteInteraction,
+            },
         },
     },
 };
+
+use crate::search_index::get_index;
 
 pub fn register(
     command: &mut CreateApplicationCommand
@@ -29,20 +34,30 @@ pub async fn autocomplete(
     ctx: &serenity::client::Context,
     command: &AutocompleteInteraction,
 ) -> Result<(), serenity::Error> {
-    // let data = ctx.data.read().await;
-    // let db = data.get::<DatabaseHandle>().expect("Database is
-    // none").as_ref();
-
-    // if let Ok(rows) = query!("select * from session").fetch_all(db).await {
-    //     for (_, row) in rows.iter().enumerate() {
-    //         println!("{:?}", row);
-    //     }
-    // }
-    command
-        .create_autocomplete_response(&ctx.http, |f| {
-            f.add_string_choice("choice", "1245")
-        })
-        .await
+    let index = get_index(ctx).await;
+    let index = index.as_ref().read().await;
+    if let Some(CommandDataOptionValue::String(term)) =
+        &command.data.options.first().expect("Autocomplete invalid").resolved
+    {
+        command
+            .create_autocomplete_response(&ctx.http, |response| {
+                for (i, paragraph) in index.search(term).iter().enumerate() {
+                    if i > 23 {
+                        break;
+                    };
+                    response.add_string_choice(
+                        paragraph.name.clone(),
+                        paragraph.number.clone(),
+                    );
+                }
+                response
+            })
+            .await
+    } else {
+        command
+            .create_autocomplete_response(&ctx.http, |response| response)
+            .await
+    }
 }
 
 pub async fn execute(

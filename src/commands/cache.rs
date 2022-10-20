@@ -2,7 +2,8 @@ use serenity::{
     builder::CreateApplicationCommand,
     model::{
         application::interaction::application_command::ApplicationCommandInteraction,
-        prelude::command::CommandOptionType, Permissions,
+        prelude::command::CommandOptionType,
+        Permissions,
     },
 };
 use sqlx::query;
@@ -35,18 +36,27 @@ pub async fn execute(
     command: &ApplicationCommandInteraction,
 ) -> Result<(), serenity::Error> {
     if let Err(why) = command.defer(&ctx.http).await {
-        println!("Err deferring a response in cache {}", why)
+        println!("Err deferring a response: \"{}\"", why)
     }
-    let db = get_database(&ctx).await.as_ref();
+    let db = get_database(ctx).await;
     let index = get_index(ctx).await;
-    let t = index.as_ref().read().await;
-    let e = query!("SELECT * FROM headings");
-    
-    command
-        .create_interaction_response(&ctx.http, |response| {
-            response.interaction_response_data(|response| {
-                response.content("Hello!");
-            })
-        }).await
-        
+    let mut t = index.as_ref().write().await;
+    t.flush();
+    t.populate();
+    let e = query!("SELECT * FROM headings")
+        .fetch_all(db.as_ref())
+        .await
+        .expect("DB Query was null you fool.");
+    for (_, itm) in e.into_iter().enumerate() {
+        t.add(itm.id, itm.number, itm.tags, itm.count, itm.name);
+    }
+
+    let _ = command
+        .create_followup_message(&ctx.http, |response| {
+            response
+                .ephemeral(true)
+                .content(format!("Populated {} lines.", t.size(),))
+        })
+        .await;
+    Ok(())
 }

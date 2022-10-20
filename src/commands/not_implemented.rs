@@ -7,7 +7,10 @@ pub async fn execute(
     command
         .create_interaction_response(&ctx.http, |response| {
             response.interaction_response_data(|response| {
-                response.ephemeral(true).content("**Error: Not Implemented!**")
+                response.ephemeral(true).content(format!(
+                    "**Error: Not Implemented! - `{}`**",
+                    command.data.name
+                ))
             })
         })
         .await
