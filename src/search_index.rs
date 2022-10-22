@@ -1,8 +1,5 @@
 use serenity::prelude::TypeMapKey;
-use std::{
-    cmp::max,
-    sync::Arc,
-};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub struct SearchIndexHandle {}

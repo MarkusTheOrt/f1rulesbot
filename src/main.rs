@@ -24,18 +24,17 @@ use serenity::{
     },
     prelude::*,
 };
+use sqlx::query;
 
 use std::{
     collections::HashSet,
     env,
-    sync::{
-        atomic::{
-            AtomicBool,
-            Ordering,
-        },
-        Arc,
-    },
-    time::Duration,
+    sync::Arc,
+};
+
+use crate::{
+    commands::get_database,
+    search_index::get_index,
 };
 
 /// Store the Database connection in the client. This is Send + Sync since we
@@ -49,9 +48,7 @@ impl TypeMapKey for DatabaseHandle {
 #[group]
 struct General;
 
-struct Bot {
-    is_cache_running: AtomicBool,
-}
+struct Bot {}
 
 #[async_trait]
 impl EventHandler for Bot {
@@ -94,26 +91,28 @@ impl EventHandler for Bot {
     ) {
         println!("Cache built and populated.");
 
-        let ctx = Arc::new(ctx);
+        let db = get_database(&ctx).await;
+        let index = get_index(&ctx).await;
+        let mut index = index.write().await;
 
-        if !self.is_cache_running.load(Ordering::Relaxed) {
-            println!("Permanent Message service started.");
-            let ctx = Arc::clone(&ctx);
-            tokio::spawn(async move {
-                let mut i = 0;
-                loop {
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    ctx.set_activity(Activity::watching(format!(
-                        "tick: {}",
-                        i
-                    )))
-                    .await;
-                    i += 1;
-                }
-            });
-
-            self.is_cache_running.swap(true, Ordering::Relaxed);
+        let data = query!("SELECT * FROM headings")
+            .fetch_all(db.as_ref())
+            .await
+            .expect("Database returned null");
+        for (_, paragraph) in data.iter().enumerate() {
+            index.add(
+                paragraph.id,
+                paragraph.number.clone(),
+                paragraph.tags.clone(),
+                paragraph.count,
+                paragraph.name.clone(),
+            )
         }
+        ctx.set_activity(Activity::listening(format!(
+            "{} regulations",
+            index.size()
+        )))
+        .await;
     }
 
     async fn interaction_create(
@@ -178,9 +177,7 @@ async fn main() {
 
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::GUILDS;
     let mut client = Client::builder(token, intents)
-        .event_handler(Bot {
-            is_cache_running: AtomicBool::new(false),
-        })
+        .event_handler(Bot {})
         .framework(framework)
         .await
         .expect("Error creating Client");

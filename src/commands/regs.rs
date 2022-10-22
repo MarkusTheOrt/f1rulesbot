@@ -14,6 +14,8 @@ use serenity::{
 
 use crate::search_index::get_index;
 
+use super::get_database;
+
 pub fn register(
     command: &mut CreateApplicationCommand
 ) -> &mut CreateApplicationCommand {
@@ -64,15 +66,45 @@ pub async fn execute(
     ctx: &serenity::client::Context,
     command: &ApplicationCommandInteraction,
 ) -> Result<(), serenity::Error> {
-    // let db = get_database(&ctx).await.as_ref();
+    if let Some(CommandDataOptionValue::String(str)) = &command
+        .data
+        .options
+        .first()
+        .expect("required elem not found.")
+        .resolved
+    {
+        let db = get_database(ctx).await;
+        let data =
+            sqlx::query!("SELECT * FROM headings WHERE number = $1", str)
+                .fetch_one(db.as_ref())
+                .await;
 
-    command
-        .create_interaction_response(&ctx.http, |response| {
-            response.interaction_response_data(|response| {
-                response
-                    .ephemeral(true)
-                    .content("This command is still a work in progress.")
+        if let Ok(row) = data {
+            return command
+                .create_interaction_response(&ctx.http, |response| {
+                    response.interaction_response_data(|response| {
+                        response.ephemeral(true).content(row.text)
+                    })
+                })
+                .await;
+        }
+
+        command
+            .create_interaction_response(&ctx.http, |response| {
+                response.interaction_response_data(|response| {
+                    response
+                        .ephemeral(true)
+                        .content("Did not find specified regulation.")
+                })
             })
-        })
-        .await
+            .await
+    } else {
+        command
+            .create_interaction_response(&ctx.http, |response| {
+                response.interaction_response_data(|response| {
+                    response.ephemeral(true).content("Invalid option supplied.")
+                })
+            })
+            .await
+    }
 }

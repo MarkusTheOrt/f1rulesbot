@@ -2,10 +2,7 @@ use serenity::{
     builder::CreateApplicationCommand,
     model::{
         application::interaction::application_command::ApplicationCommandInteraction,
-        prelude::{
-            command::CommandOptionType,
-            interaction::InteractionResponseType,
-        },
+        prelude::command::CommandOptionType,
         Permissions,
     },
 };
@@ -39,13 +36,8 @@ pub async fn execute(
     command: &ApplicationCommandInteraction,
 ) -> Result<(), serenity::Error> {
     // Defer interaction response as ephemeral
-    if let Err(why) = command
-        .create_interaction_response(&ctx.http, |f| {
-            f.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-                .interaction_response_data(|f| f.ephemeral(true))
-        })
-        .await
-    {
+
+    if let Err(why) = command.defer_ephemeral(&ctx.http).await {
         println!("Err deferring a response: \"{}\"", why)
     }
     let db = get_database(ctx).await;

@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 dotenvy = "0.15.5"
 lev_distance = "0.1.1"
-serenity = { version = "0.11.5", features = [] }
+serenity = { git = "https://github.com/serenity-rs/serenity", branch="current", features=[]}
 tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread", "signal"] }
 serde = { version = "1.0.145", features = ["derive"] }
 sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-rustls", "time"] }
