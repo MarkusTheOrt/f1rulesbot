@@ -1,5 +1,9 @@
+use lev_distance::lev_distance;
 use serenity::prelude::TypeMapKey;
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    vec,
+};
 use tokio::sync::RwLock;
 
 pub struct SearchIndexHandle {}
@@ -50,22 +54,41 @@ impl SearchIndex {
         let term = term.to_uppercase();
         let mut v: Vec<IndexParagraph> = vec![];
         for (_, paragraph) in self.paragraphs.iter().enumerate() {
+            let mut p = paragraph.clone();
             if paragraph.name.starts_with(&term) {
-                let mut p = paragraph.clone();
                 p.scale = 100;
                 v.push(p);
                 continue;
             }
             let dist =
                 lev_distance::lev_distance(&paragraph.name, &term) as i32;
-            if dist < 15 {
-                let mut p = paragraph.clone();
+            if dist < 2 {
                 p.scale = 100 / (dist + 1);
                 v.push(p);
                 continue;
             }
+
+            let tags = paragraph.tags.split(',').collect::<Vec<&str>>();
+            let mut found = false;
+
+            for (_, tag) in tags.iter().enumerate() {
+                if tag.to_uppercase().starts_with(&term) {
+                    p.scale = 95;
+                    v.push(p.clone());
+                    break;
+                }
+                let dist =
+                    lev_distance(tag.to_uppercase().as_str(), &term) as i32;
+                if dist < 4 {
+                    found = true;
+                }
+            }
+            if found {
+                v.push(p.clone());
+            }
         }
         v.sort_unstable_by(|a, b| b.scale.cmp(&a.scale));
+
         v
     }
 

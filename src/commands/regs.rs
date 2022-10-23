@@ -73,17 +73,36 @@ pub async fn execute(
         .expect("required elem not found.")
         .resolved
     {
+        let number =
+            *str.split('.').collect::<Vec<&str>>().first().expect("NUMBAH");
+
         let db = get_database(ctx).await;
+        let first =
+            sqlx::query!("SELECT text FROM headings WHERE number = $1", number)
+                .fetch_one(db.as_ref())
+                .await;
+
         let data =
             sqlx::query!("SELECT * FROM headings WHERE number = $1", str)
                 .fetch_one(db.as_ref())
                 .await;
 
+        let mut tlr = None;
+        if let Ok(fr) = first {
+            tlr = Some(fr.text);
+        }
+
         if let Ok(row) = data {
             return command
                 .create_interaction_response(&ctx.http, |response| {
                     response.interaction_response_data(|response| {
-                        response.ephemeral(true).content(row.text)
+                        let mut content = "".to_string();
+                        if let Some(tlr) = tlr {
+                            content = tlr
+                        }
+                        response
+                            .ephemeral(true)
+                            .content(format!("{}{}", content, row.text))
                     })
                 })
                 .await;
