@@ -2,6 +2,8 @@ FROM rust:latest as build-stage
 
 WORKDIR /app
 
+ARG DATABASE_URL
+
 COPY . .
 
 RUN rustup toolchain install nightly
