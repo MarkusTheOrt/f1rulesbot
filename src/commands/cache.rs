@@ -2,7 +2,10 @@ use serenity::{
     builder::CreateApplicationCommand,
     model::{
         application::interaction::application_command::ApplicationCommandInteraction,
-        prelude::command::CommandOptionType,
+        prelude::{
+            command::CommandOptionType,
+            Activity,
+        },
         Permissions,
     },
 };
@@ -49,13 +52,18 @@ pub async fn execute(
         .fetch_all(db.as_ref())
         .await
         .expect("DB Query was null you fool.");
+
+
     for (_, itm) in e.into_iter().enumerate() {
-        t.add(itm.id, itm.number, itm.tags, itm.count, itm.name);
+        t.add(itm.id, itm.number, itm.tags, itm.count, itm.name)
     }
+
+    ctx.set_activity(Activity::watching(format!("Cache Size: {}", t.size())))
+        .await;
 
     let _ = command
         .create_followup_message(&ctx.http, |response| {
-            response.ephemeral(true).content("Test?")
+            response.ephemeral(true).content("Cache flushed and repopulated!")
         })
         .await;
     Ok(())

@@ -114,7 +114,7 @@ impl EventHandler for Bot {
         )))
         .await;
     }
-
+    
     async fn interaction_create(
         &self,
         ctx: Context,
