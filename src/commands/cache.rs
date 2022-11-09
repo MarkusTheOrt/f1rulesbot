@@ -53,7 +53,6 @@ pub async fn execute(
         .await
         .expect("DB Query was null you fool.");
 
-
     for (_, itm) in e.into_iter().enumerate() {
         t.add(itm.id, itm.number, itm.tags, itm.count, itm.name)
     }

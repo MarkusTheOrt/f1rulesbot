@@ -88,13 +88,10 @@ impl EventHandler for Bot {
         let db = get_database(&ctx).await;
         let index = get_index(&ctx).await;
         let mut index = index.write().await;
-        let data = query!(
-            "SELECT * FROM customer_data WHERE customer_id = $1",
-            customer_index
-        )
-        .fetch_all(db.as_ref())
-        .await
-        .expect("Database returned null");
+        let data = query!("SELECT * FROM headings")
+            .fetch_all(db.as_ref())
+            .await
+            .expect("Database returned null");
         for (_, paragraph) in data.iter().enumerate() {
             index.add(
                 paragraph.id,
