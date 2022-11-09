@@ -63,24 +63,18 @@ impl EventHandler for Bot {
             OnlineStatus::Online,
         )
         .await;
-
-        let _ =
-            Command::create_global_application_command(&ctx.http, |command| {
-                commands::cache::register(command)
-            })
-            .await;
-        let _global =
-            Command::create_global_application_command(&ctx.http, |command| {
-                commands::ping::register(command)
-            })
-            .await;
+        let guild = GuildId::from(883847530687913995);
         if let Err(why) =
-            Command::create_global_application_command(&ctx.http, |command| {
-                commands::regs::register(command)
+            Command::set_global_application_commands(&ctx.http, |f| {
+                f.create_application_command(|cmd| {
+                    commands::cache::register(cmd)
+                })
+                .create_application_command(|cmd| commands::ping::register(cmd))
+                .create_application_command(|cmd| commands::regs::register(cmd))
             })
             .await
         {
-            println!("Error registering Regs command. {}", why)
+            println!("Error registering commands: {}", why);
         }
     }
 
@@ -90,15 +84,17 @@ impl EventHandler for Bot {
         _guilds: Vec<GuildId>,
     ) {
         println!("Cache built and populated.");
-
+        let customer_index = 425;
         let db = get_database(&ctx).await;
         let index = get_index(&ctx).await;
         let mut index = index.write().await;
-
-        let data = query!("SELECT * FROM headings")
-            .fetch_all(db.as_ref())
-            .await
-            .expect("Database returned null");
+        let data = query!(
+            "SELECT * FROM customer_data WHERE customer_id = $1",
+            customer_index
+        )
+        .fetch_all(db.as_ref())
+        .await
+        .expect("Database returned null");
         for (_, paragraph) in data.iter().enumerate() {
             index.add(
                 paragraph.id,
@@ -114,7 +110,7 @@ impl EventHandler for Bot {
         )))
         .await;
     }
-    
+
     async fn interaction_create(
         &self,
         ctx: Context,
